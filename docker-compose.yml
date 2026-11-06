@@ -1,0 +1,32 @@
+# Horizon dedicated server with Rust mods, for Coolify (or `docker compose up -d --build`).
+# How it works and how to add mods: packaging/coolify/README.md.
+#
+# Before the first start, put the prepared Minecraft 26.3 files (horizon-prepare, from your own Minecraft) on
+# the host, in HORIZON_RESOURCES (default /srv/horizon/26.3; the folder holding horizon-resources.json).
+services:
+  horizon:
+    build:
+      context: .
+      dockerfile: packaging/coolify/Dockerfile
+      args:
+        PROFILE: ${HORIZON_PROFILE:-release}          # release (slow build, fastest server) or fast
+        HORIZON_REVISION: ${SOURCE_COMMIT:-}          # Coolify passes the commit; native mods pinned to one check it
+    restart: unless-stopped
+    stop_grace_period: 180s                         # horizon-server saves the world before it stops
+    ports:
+      - "${HORIZON_PORT:-25565}:25565/tcp"
+    environment:
+      # Read on the first start only (it writes /data/server.toml); afterwards edit server.toml in the volume.
+      HORIZON_EULA: ${HORIZON_EULA:-false}          # true: you accept https://aka.ms/MinecraftEULA
+      HORIZON_WORLD: ${HORIZON_WORLD:-world}
+      HORIZON_SEED: ${HORIZON_SEED:-}
+      HORIZON_WHITELIST: ${HORIZON_WHITELIST:-true}
+      HORIZON_PLAYERS: ${HORIZON_PLAYERS:-}         # comma-separated, e.g. Alex,Steve
+      HORIZON_OP: ${HORIZON_OP:-}
+      HORIZON_ONLINE: ${HORIZON_ONLINE:-true}       # false: anyone joins under any name (keep the whitelist on)
+    volumes:
+      - horizon-data:/data
+      - ${HORIZON_RESOURCES:-/srv/horizon/26.3}:/opt/horizon/.local/horizon-client/26.3:ro
+
+volumes:
+  horizon-data:
